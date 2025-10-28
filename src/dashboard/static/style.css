@@ -1,0 +1,113 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    margin: 0;
+    padding: 20px;
+    background-color: #f0f2f5;
+    color: #333;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2 {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background-color: #e9ecef;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.stat-card h2 {
+    font-size: 1.2em;
+    margin-top: 0;
+    color: #555;
+}
+
+.stat-card p {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #007bff;
+    margin: 0;
+}
+
+.activity-log {
+    background-color: #e9ecef;
+    padding: 20px;
+    border-radius: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.activity-log ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.activity-log li {
+    background-color: #fff;
+    margin-bottom: 10px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    border-left: 5px solid #007bff;
+    font-size: 0.9em;
+    color: #444;
+}
+
+.activity-log li.INFO {
+    border-left-color: #28a745; /* Green for INFO */
+}
+
+.activity-log li.WARNING {
+    border-left-color: #ffc107; /* Yellow for WARNING */
+}
+
+.activity-log li.ERROR {
+    border-left-color: #dc3545; /* Red for ERROR */
+}
+
+.activity-log li span.timestamp {
+    font-weight: bold;
+    margin-right: 5px;
+    color: #6c757d;
+}
+
+.activity-log li span.level {
+    font-weight: bold;
+    margin-right: 10px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    color: #fff;
+}
+
+.activity-log li span.level.INFO {
+    background-color: #28a745;
+}
+
+.activity-log li span.level.WARNING {
+    background-color: #ffc107;
+}
+
+.activity-log li span.level.ERROR {
+    background-color: #dc3545;
+}

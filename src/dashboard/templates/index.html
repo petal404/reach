@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reach Bot Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Reach Bot Dashboard</h1>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h2>Total Users</h2>
+                <p id="total-users">-</p>
+            </div>
+            <div class="stat-card">
+                <h2>Followed</h2>
+                <p id="followed-count">-</p>
+            </div>
+            <div class="stat-card">
+                <h2>Unfollowed</h2>
+                <p id="unfollowed-count">-</p>
+            </div>
+            <div class="stat-card">
+                <h2>Disqualified</h2>
+                <p id="disqualified-count">-</p>
+            </div>
+        </div>
+
+        <div class="settings-grid">
+            <div class="settings-card">
+                <h2>Settings</h2>
+                <pre>{{ settings | tojson(indent=4) }}</pre>
+            </div>
+            <div class="settings-card">
+                <h2>Criteria</h2>
+                <pre>{{ criteria | tojson(indent=4) }}</pre>
+            </div>
+        </div>
+
+        <h2>Recent Activity</h2>
+        <div class="activity-log">
+            <ul id="log-list"></ul>
+        </div>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>

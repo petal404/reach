@@ -1,0 +1,9 @@
+PyGithub
+PyYAML
+python-dotenv
+pytest
+pytest-mock
+SQLAlchemy
+httpx
+Flask
+python-json-logger

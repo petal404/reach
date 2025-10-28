@@ -1,0 +1,20 @@
+delays:
+  action_min: 10       # Minimum seconds to wait between follow/unfollow actions
+  action_max: 90      # Maximum seconds to wait
+  rate_limit_sleep: 900 # Seconds to sleep when rate limit is approaching (15 minutes)
+  long_sleep_min_minutes: 83 # Minimum minutes to sleep after a run
+  long_sleep_max_hours: 4 # Maximum hours to sleep after a run
+
+limits:
+  # Max number of users to scan/follow/unfollow per run. Set to 0 for no limit.
+  max_scan: 2500
+  max_follow: 350
+  max_unfollow: 50
+  # Stop API calls if remaining rate limit is below this threshold
+  rate_limit_buffer: 100
+  cache_ttl_hours: 24 # TTL for cached user data in DB
+  max_worker_threads: 15 # For parallel processing of users
+
+unfollow:
+  # Unfollow users who haven't been active in this many days
+  inactive_days: 270 # 9 months

@@ -1,0 +1,25 @@
+# Criteria for finding relevant GitHub users to target.
+
+# Existing criteria
+repository_keywords:
+  - "portfolio-website"
+  - "developer-portfolio"
+  - "personal-portfolio"
+  - "tech-portfolio"
+  - "portfolio"
+  - "showcase"
+  - "resume"
+  - "my-site"
+
+# New sections for enhanced scoring
+
+# Weights for different signal categories
+negative_signals:
+  max_followers: 100
+  max_following: 500
+  max_inactivity_days: 180 # 6 months
+  seniority_keywords:
+    - "google"
+    - "meta"
+  exclude_users: [] # Specific usernames to always exclude
+  exclude_keywords: [] # Keywords that, if found, disqualify a user

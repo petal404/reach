@@ -1,0 +1,53 @@
+name: Reach Bot Controller
+
+on:
+  schedule:
+    # Runs every 24 hours
+    - cron: '0 */24 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install -r requirements.txt
+
+      - name: Check Time Before Sync
+        run: date -u
+
+      - name: Synchronize Runner Time
+        run: sudo timedatectl set-ntp true
+
+      - name: Check Time After Sync
+        run: date -u
+
+      - name: Run Bot
+        env:
+          GITHUB_PAT: ${{ secrets.REACH_BOT_TOKEN }}
+        run: python3 -m src.main --action all
+
+      - name: Commit and push state changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add reach.db reach.log
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "[BOT] Update state and logs"
+            git push
+          fi
