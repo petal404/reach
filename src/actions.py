@@ -34,7 +34,7 @@ async def follow_users(dry_run=False):
             username = user_dict['username']
             
             # Perform a random number of follows (4-11) before pausing
-            batch_size = random.randint(4, 11)
+            batch_size = random.randint(6, 23)
             logger.info(f"Processing a batch of up to {batch_size} users.")
 
             for i in range(batch_size):
