@@ -14,9 +14,7 @@ async def follow_users(dry_run=False):
     """Follows a batch of users from the database based on the new stealth criteria."""
     settings, _ = load_config()
     max_follow_per_run = settings['limits'].get('max_follow', 350)
-    followed_today_count = 0
-
-    # Get all users scheduled for following
+    
     users_to_follow = get_users_by_status_and_score('targeted', min_score=0, limit=max_follow_per_run)
 
     if not users_to_follow:
@@ -25,27 +23,28 @@ async def follow_users(dry_run=False):
 
     logger.info(f"Starting follow sequence for {len(users_to_follow)} targeted users.")
 
+    followed_today_count = 0
+    user_index = 0
+    
     async with GithubAPI() as api:
-        for user_dict in users_to_follow:
-            if followed_today_count >= max_follow_per_run:
-                logger.info(f"Daily follow limit of {max_follow_per_run} reached. Remaining users will be processed in the next run.")
-                break
-
-            username = user_dict['username']
-            
-            # Perform a random number of follows (4-11) before pausing
+        while user_index < len(users_to_follow) and followed_today_count < max_follow_per_run:
             batch_size = random.randint(6, 23)
-            logger.info(f"Processing a batch of up to {batch_size} users.")
+            
+            # Determine the actual size of the current batch
+            end_index = min(user_index + batch_size, len(users_to_follow))
+            batch_users = users_to_follow[user_index:end_index]
+            
+            # Log the batch in the desired format
+            usernames_in_batch = [user['username'] for user in batch_users]
+            logger.info(f'batch of {len(usernames_in_batch)}: {", ".join(usernames_in_batch)}')
 
-            for i in range(batch_size):
+            for user_dict in batch_users:
                 if followed_today_count >= max_follow_per_run:
-                    break
-                
-                # This logic needs to be improved to get the next user from the list
-                # For now, we will just process the current user and then break the inner loop
-                if i > 0:
+                    logger.info(f"Daily follow limit of {max_follow_per_run} reached.")
                     break
 
+                username = user_dict['username']
+                
                 if dry_run:
                     logger.info(f"[DRY-RUN] Would follow user: {username}", extra={'props': {"username": username, "dry_run": True}})
                     update_user_status(username, 'skipped')
@@ -61,6 +60,11 @@ async def follow_users(dry_run=False):
                 else:
                     logger.error(f"Failed to follow user: {username}", extra={'props': {"username": username}})
                     update_user_status(username, 'skipped')
+
+            user_index += len(batch_users)
+
+            if followed_today_count >= max_follow_per_run:
+                break
 
             # Exponential backoff after 98 follows
             if followed_today_count > 98:

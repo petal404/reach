@@ -71,12 +71,28 @@ class GithubAPI:
         return data['items'] if data and 'items' in data else []
 
     async def follow_user(self, username):
-        response = await self._request("PUT", f"/user/following/{username}")
-        return response is not None
+        try:
+            response = await self.client.put(f"/user/following/{username}")
+            response.raise_for_status()
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error occurred while following {username}: {e.response.status_code} for URL {e.request.url}")
+            return False
+        except Exception as e:
+            logger.error(f"An error occurred while following {username}: {e}")
+            return False
 
     async def unfollow_user(self, username):
-        response = await self._request("DELETE", f"/user/following/{username}")
-        return response is not None
+        try:
+            response = await self.client.delete(f"/user/following/{username}")
+            response.raise_for_status()
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error occurred while unfollowing {username}: {e.response.status_code} for URL {e.request.url}")
+            return False
+        except Exception as e:
+            logger.error(f"An error occurred while unfollowing {username}: {e}")
+            return False
 
     async def check_is_follower(self, username):
         try:
