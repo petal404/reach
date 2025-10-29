@@ -19,8 +19,8 @@ def build_portfolio_search_query(criteria):
     two_weeks_ago = (datetime.now(timezone.utc) - timedelta(days=14)).strftime('%Y-%m-%d')
     max_followers = criteria.get('negative_signals', {}).get('max_followers', 100)
     
-    # Construct the final query
-    query = f'({keyword_query_part}) in:name,description,readme created:>={two_weeks_ago} followers:<={max_followers} sort:created-desc'
+    # Construct the final query. By default, GitHub searches in name, description, and readme.
+    query = f'({keyword_query_part}) created:>={two_weeks_ago} followers:<={max_followers} sort:created-desc'
     
     logger.info(f"Built portfolio search query: {query}")
     return query
