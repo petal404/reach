@@ -148,6 +148,27 @@ class GithubAPI:
     async def get_public_events(self, per_page=100):
         return await self._request("GET", "/events", params={"per_page": per_page})
 
+    async def get_authenticated_user(self):
+        """Gets the username of the authenticated user."""
+        data = await self._request("GET", "/user")
+        return data['login'] if data and 'login' in data else None
+
+    async def get_following(self, username):
+        """Gets the full list of users a user is following, handling pagination."""
+        following_list = []
+        page = 1
+        while True:
+            params = {"per_page": 100, "page": page}
+            data = await self._request("GET", f"/users/{username}/following", params=params)
+            if data:
+                following_list.extend([user['login'] for user in data])
+                if len(data) < 100:
+                    break # Last page
+                page += 1
+            else:
+                break # No data or an error occurred
+        return following_list
+
     async def get_comprehensive_user_data(self, username, since_date_events=None):
         user_details, repos_data, starred_repos_data, orgs_data, events_data, profile_readme_content = await asyncio.gather(
             self.get_user_details(username),

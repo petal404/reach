@@ -5,7 +5,6 @@ from datetime import datetime, timedelta, timezone
 from .github_api import GithubAPI
 from .database import update_user_status, get_followed_users, get_users_by_status_and_score
 from .config_loader import load_config
-from .scoring import UserValidator
 from .metrics import metrics_tracker
 
 logger = logging.getLogger(__name__)

@@ -10,16 +10,35 @@ from .metrics import metrics_tracker
 logger = logging.getLogger(__name__)
 
 def build_portfolio_search_query(criteria):
-    """Builds the portfolio search query."""
+    """Builds the portfolio search query from keywords in the criteria file."""
+    keywords = criteria.get('repository_keywords', ['portfolio'])
+    
+    # Join keywords with OR operator and group them with parentheses
+    keyword_query_part = " OR ".join(f'"{keyword}"' for keyword in keywords)
+    
     two_weeks_ago = (datetime.now(timezone.utc) - timedelta(days=14)).strftime('%Y-%m-%d')
     max_followers = criteria.get('negative_signals', {}).get('max_followers', 100)
-    query = f'portfolio in:name created:>={two_weeks_ago} followers:<={max_followers} sort:created-desc'
+    
+    # Construct the final query
+    query = f'({keyword_query_part}) in:name,description,readme created:>={two_weeks_ago} followers:<={max_followers} sort:created-desc'
+    
     logger.info(f"Built portfolio search query: {query}")
     return query
 
-async def process_user(username, api, validator, dry_run=False):
+async def process_user(username, api, validator, already_followed_users, dry_run=False):
     """Process a single user: check if they should be disqualified and if not, schedule them for following."""
     metrics_tracker.users_processed += 1
+
+    if username in already_followed_users:
+        logger.info(f"User '{username}' is already being followed. Disqualifying.", extra={'props': {"username": username}})
+        metrics_tracker.users_disqualified += 1
+        if not dry_run:
+            # We need user_data to disqualify, so we have to fetch it first.
+            user_data = await api.get_user_details(username)
+            if user_data:
+                add_or_update_user(user_data, status='disqualified')
+        return
+
     if is_user_disqualified(username):
         logger.debug(f"User '{username}' is already in the disqualified list. Skipping.", extra={'props': {"username": username}})
         return
@@ -50,8 +69,16 @@ async def scan_for_users(dry_run=False):
     validator = UserValidator(criteria)
     
     found_users = set()
+    already_followed_users = set()
 
     async with GithubAPI() as api:
+        # Get the authenticated user's username
+        auth_user = await api.get_authenticated_user()
+        if auth_user:
+            logger.info(f"Authenticated as {auth_user}. Fetching list of users already being followed.")
+            already_followed_users = set(await api.get_following(auth_user))
+            logger.info(f"Found {len(already_followed_users)} users that are already being followed.")
+
         # Task 1: Portfolio Creators
         logger.info("Searching for users who recently created portfolio repositories...")
         portfolio_query = build_portfolio_search_query(criteria)
@@ -81,5 +108,5 @@ async def scan_for_users(dry_run=False):
         logger.info(f"[SCAN COMPLETE] Found a total of {len(found_users)} unique potential users to process.")
 
         # Process all found users
-        tasks = [process_user(username, api, validator, dry_run) for username in found_users]
+        tasks = [process_user(username, api, validator, already_followed_users, dry_run) for username in found_users]
         await asyncio.gather(*tasks)

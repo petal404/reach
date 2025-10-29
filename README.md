@@ -1,5 +1,4 @@
-# Project Reach 
-[![Reach Bot Controller](https://github.com/felicityblueish/reach/actions/workflows/bot_controller.yml/badge.svg)](https://github.com/felicityblueish/reach/actions/workflows/bot_controller.yml)
+# Project Reach
 
 > *"This project was inspired by the challenges of building products only to see them fail to reach their potential due to marketing hurdles and competition. My goal was to create a tool that is less about marketing and more about product delivery—connecting with users who have a genuine, immediate need. This is vital for respecting the GitHub ecosystem long-term. If you use or fork this project, please do so responsibly."*
 
