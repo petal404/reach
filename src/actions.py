@@ -6,6 +6,7 @@ from .github_api import GithubAPI
 from .database import update_user_status, get_followed_users, get_users_by_status_and_score
 from .config_loader import load_config
 from .metrics import metrics_tracker
+from .scoring import UserValidator
 
 logger = logging.getLogger(__name__)
 
