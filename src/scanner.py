@@ -9,21 +9,7 @@ from .metrics import metrics_tracker
 
 logger = logging.getLogger(__name__)
 
-def build_portfolio_search_query(criteria):
-    """Builds the portfolio search query from keywords in the criteria file."""
-    keywords = criteria.get('repository_keywords', ['portfolio'])
-    
-    # Join keywords with OR operator and group them with parentheses
-    keyword_query_part = " OR ".join(f'"{keyword}"' for keyword in keywords)
-    
-    two_weeks_ago = (datetime.now(timezone.utc) - timedelta(days=14)).strftime('%Y-%m-%d')
-    max_followers = criteria.get('negative_signals', {}).get('max_followers', 100)
-    
-    # Construct the final query. By default, GitHub searches in name, description, and readme.
-    query = f'({keyword_query_part}) created:>={two_weeks_ago} followers:<={max_followers} sort:created-desc'
-    
-    logger.info(f"Built portfolio search query: {query}")
-    return query
+
 
 async def process_user(username, api, validator, already_followed_users, dry_run=False):
     """Process a single user: check if they should be disqualified and if not, schedule them for following."""
@@ -79,15 +65,25 @@ async def scan_for_users(dry_run=False):
             already_followed_users = set(await api.get_following(auth_user))
             logger.info(f"Found {len(already_followed_users)} users that are already being followed.")
 
-        # Task 1: Portfolio Creators
-        logger.info("Searching for users who recently created portfolio repositories...")
-        portfolio_query = build_portfolio_search_query(criteria)
-        repo_search_results = await api.search_repositories(portfolio_query, limit=100)
-        if repo_search_results:
-            for repo in repo_search_results:
-                owner = repo.get('owner')
-                if owner and owner.get('type') == 'User':
-                    found_users.add(owner['login'])
+        # Task 1: Keyword-based search
+        logger.info("Searching for users based on keywords...")
+        keywords = criteria.get('repository_keywords', ['portfolio'])
+        search_tasks = []
+        two_weeks_ago = (datetime.now(timezone.utc) - timedelta(days=14)).strftime('%Y-%m-%d')
+        max_followers = criteria.get('negative_signals', {}).get('max_followers', 100)
+
+        for keyword in keywords:
+            query = f'{keyword} in:name,description,readme created:>={two_weeks_ago} followers:<={max_followers} sort:created-desc'
+            logger.info(f"Built search query: {query}")
+            search_tasks.append(api.search_repositories(query, limit=100))
+        
+        search_results = await asyncio.gather(*search_tasks)
+        for result in search_results:
+            if result:
+                for repo in result:
+                    owner = repo.get('owner')
+                    if owner and owner.get('type') == 'User':
+                        found_users.add(owner['login'])
 
         # Task 2: Star/Fork Activity
         logger.info("Searching for users who recently starred or forked repositories...")
