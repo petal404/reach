@@ -3,7 +3,7 @@ import asyncio
 import random
 from datetime import datetime, timedelta, timezone
 from .github_api import GithubAPI
-from .database import update_user_status, get_followed_users, get_users_by_status_and_score
+from .database import update_user_status, get_users_to_check, count_followed_users, get_users_by_status_and_score
 from .config_loader import load_config
 from .metrics import metrics_tracker
 from .scoring import UserValidator
@@ -86,13 +86,19 @@ async def unfollow_users(dry_run=False):
         limit = settings['limits'].get('max_unfollow', 50)
         inactive_days_threshold = settings['unfollow'].get('inactive_days', 270)
         
-        # 1. Get users who don't follow back
-        followed_users = get_followed_users()
+        total_followed_users = count_followed_users()
+        daily_check_limit = total_followed_users // 14
+
+        # 1. Get users who need to be checked
+        users_to_check = get_users_to_check(14, daily_check_limit)
         users_to_unfollow = set()
 
-        for user_dict in followed_users:
+        for user_dict in users_to_check:
             username = user_dict['username']
-            followed_at = user_dict.get('followed_at')
+            followed_at = datetime.fromisoformat(user_dict.get('followed_at'))
+
+            # Update last_checked_at timestamp
+            update_user_status(username, 'followed', last_checked_at=datetime.now(timezone.utc))
 
             is_follower = await api.check_is_follower(username)
             if not is_follower:
@@ -101,7 +107,7 @@ async def unfollow_users(dry_run=False):
                     users_to_unfollow.add(username)
 
         # 2. Get followed users who are now disqualified
-        for user_dict in followed_users:
+        for user_dict in users_to_check:
             username = user_dict['username']
             user_data = await api.get_user_details(username)
             if user_data:

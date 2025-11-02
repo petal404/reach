@@ -26,6 +26,7 @@ class User(Base):
     last_scanned_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     followed_at = Column(DateTime)
     unfollowed_at = Column(DateTime)
+    last_checked_at = Column(DateTime)
     followers_count = Column(Integer, default=0)
     following_count = Column(Integer, default=0)
     public_repos_count = Column(Integer, default=0)
@@ -50,6 +51,7 @@ class User(Base):
             'last_scanned_at': self.last_scanned_at.isoformat() if self.last_scanned_at else None,
             'followed_at': self.followed_at.isoformat() if self.followed_at else None,
             'unfollowed_at': self.unfollowed_at.isoformat() if self.unfollowed_at else None,
+            'last_checked_at': self.last_checked_at.isoformat() if self.last_checked_at else None,
             'followers_count': self.followers_count,
             'following_count': self.following_count,
             'public_repos_count': self.public_repos_count,
@@ -212,6 +214,27 @@ def get_followed_users():
     finally:
         session.close()
 
+def get_users_to_check(check_interval_days, limit):
+    """Retrieves followed users who haven't been checked recently."""
+    session = Session()
+    try:
+        threshold = datetime.now(timezone.utc) - timedelta(days=check_interval_days)
+        users = session.query(User).filter(
+            User.status == 'followed',
+            (User.last_checked_at == None) | (User.last_checked_at < threshold)
+        ).limit(limit).all()
+        return [user.to_dict() for user in users]
+    finally:
+        session.close()
+
+def count_followed_users():
+    """Counts the total number of followed users."""
+    session = Session()
+    try:
+        return session.query(User).filter_by(status='followed').count()
+    finally:
+        session.close()
+
 def get_users_to_follow(limit):
     """Retrieves a list of the highest-scoring users with 'targeted' status."""
     session = Session()
@@ -221,7 +244,7 @@ def get_users_to_follow(limit):
     finally:
         session.close()
 
-def update_user_status(username, status):
+def update_user_status(username, status, last_checked_at=None):
     """Updates the status for a user, or deletes them if unfollowed."""
     session = Session()
     try:
@@ -234,6 +257,8 @@ def update_user_status(username, status):
                 user.status = status
                 if status == 'followed':
                     user.followed_at = datetime.now(timezone.utc)
+                if last_checked_at:
+                    user.last_checked_at = last_checked_at
                 logger.info(f"Updated status for user '{username}' to '{status}'.")
             session.commit()
         else:
