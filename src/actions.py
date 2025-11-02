@@ -96,7 +96,7 @@ async def unfollow_users(dry_run=False):
 
             is_follower = await api.check_is_follower(username)
             if not is_follower:
-                if followed_at and (datetime.now(timezone.utc) - followed_at).days > inactive_days_threshold:
+                if followed_at and (datetime.now(timezone.utc) - followed_at.replace(tzinfo=timezone.utc)).days > inactive_days_threshold:
                     logger.info(f"User {username} has not followed back for >{inactive_days_threshold} days. Scheduling for unfollow.")
                     users_to_unfollow.add(username)
 
