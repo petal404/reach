@@ -49,5 +49,6 @@ jobs:
             echo "No changes to commit."
           else
             git commit -m "[BOT] Update state and logs"
+            git pull --rebase
             git push
           fi
