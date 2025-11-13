@@ -3,7 +3,7 @@ name: Reach Bot Controller
 on:
   schedule:
     # Runs every 15 hours
-    - cron: '0 */15 * * *'
+    - cron: '0 */3 * * *'
   workflow_dispatch:
 
 jobs:
