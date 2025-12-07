@@ -28,7 +28,7 @@ async def follow_users(dry_run=False):
     
     async with GithubAPI() as api:
         while user_index < len(users_to_follow) and followed_today_count < max_follow_per_run:
-            batch_size = random.randint(6, 23)
+            batch_size = random.randint(13, 33)
             
             # Determine the actual size of the current batch
             end_index = min(user_index + batch_size, len(users_to_follow))
@@ -72,7 +72,7 @@ async def follow_users(dry_run=False):
                 sleep_max = settings['delays'].get('action_max', 90) * (followed_today_count / 10)
             else:
                 sleep_min = 10  # 10 seconds
-                sleep_max = 900 # 15 minutes
+                sleep_max = 90 # 1.5 minutes
             
             sleep_duration = random.randint(int(sleep_min), int(sleep_max))
             logger.info(f"Batch complete. Pausing for {sleep_duration} seconds.")

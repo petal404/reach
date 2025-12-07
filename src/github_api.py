@@ -46,7 +46,7 @@ class GithubAPI:
                 if remaining < 100:
                     reset_time = int(response.headers['X-RateLimit-Reset'])
                     time_until_reset = max(0, reset_time - time.time())
-                    sleep_duration = time_until_reset + random.randint(199, 1620) # time to reset plus random bonus room after reset of 199 seconds to  27 minutes
+                    sleep_duration = time_until_reset + random.randint(19, 199) # time to reset plus random bonus room after reset of 199 seconds to  27 minutes
                     logger.warning(f"Rate limit approaching ({remaining} left). Sleeping for {sleep_duration:.0f} seconds until after reset.")
                     metrics_tracker.add_sleep_time(sleep_duration)
                     await asyncio.sleep(sleep_duration)
