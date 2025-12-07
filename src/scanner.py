@@ -9,30 +9,21 @@ from .metrics import metrics_tracker
 
 logger = logging.getLogger(__name__)
 
-
-
-async def process_user(username, api, validator, already_followed_users, dry_run=False):
-    """Process a single user: check if they should be disqualified and if not, schedule them for following."""
+async def process_user(username, api, validator, dry_run=False):
+    """Process a single user: check if they should be disqualified and if not, schedule them for following.
+    Returns True if the user was scheduled, False otherwise.
+    """
     metrics_tracker.users_processed += 1
 
-    if username in already_followed_users:
-        logger.info(f"User '{username}' is already being followed. Disqualifying.", extra={'props': {"username": username}})
-        metrics_tracker.users_disqualified += 1
-        if not dry_run:
-            # We need user_data to disqualify, so we have to fetch it first.
-            user_data = await api.get_user_details(username)
-            if user_data:
-                add_or_update_user(user_data, status='disqualified')
-        return
-
+    # Check local database for previous disqualification
     if is_user_disqualified(username):
         logger.debug(f"User '{username}' is already in the disqualified list. Skipping.", extra={'props': {"username": username}})
-        return
+        return False
 
     user_data = await api.get_user_details(username)
     if not user_data:
         logger.warning(f"Could not fetch details for user '{username}'. Skipping.", extra={'props': {"username": username}})
-        return
+        return False
 
     is_disqualified, reason = validator.is_disqualified(user_data)
     if is_disqualified:
@@ -40,11 +31,13 @@ async def process_user(username, api, validator, already_followed_users, dry_run
         metrics_tracker.users_disqualified += 1
         if not dry_run:
             add_or_update_user(user_data, status='disqualified')
+        return False
     else:
         logger.info(f"User '{username}' passed checks. Scheduling for following.", extra={'props': {"username": username}})
         metrics_tracker.users_scheduled += 1
         if not dry_run:
             add_or_update_user(user_data, status='targeted')
+        return True
 
 async def scan_for_users(dry_run=False):
     """Main async function to scan for users based on the new simplified criteria."""
@@ -53,6 +46,8 @@ async def scan_for_users(dry_run=False):
 
     settings, criteria = load_config()
     validator = UserValidator(criteria)
+    # Get the max follow limit to cap scheduling
+    max_follows_per_run = settings.get('limits', {}).get('max_follow', 350)
     
     found_users = set()
     already_followed_users = set()
@@ -62,6 +57,7 @@ async def scan_for_users(dry_run=False):
         auth_user = await api.get_authenticated_user()
         if auth_user:
             logger.info(f"Authenticated as {auth_user}. Fetching list of users already being followed.")
+            # We fetch these to filter them out from search results immediately
             already_followed_users = set(await api.get_following(auth_user))
             logger.info(f"Found {len(already_followed_users)} users that are already being followed.")
 
@@ -102,8 +98,27 @@ async def scan_for_users(dry_run=False):
             logger.info("Scan complete: No potential users found in this run.")
             return
 
-        logger.info(f"[SCAN COMPLETE] Found a total of {len(found_users)} unique potential users to process.")
+        # NEW: Filter out already followed users strategically BEFORE processing
+        original_count = len(found_users)
+        found_users = {u for u in found_users if u not in already_followed_users}
+        skipped_count = original_count - len(found_users)
+        
+        if skipped_count > 0:
+            logger.info(f"Strategically skipped {skipped_count} users who are already being followed to save API calls.")
 
-        # Process all found users
-        tasks = [process_user(username, api, validator, already_followed_users, dry_run) for username in found_users]
-        await asyncio.gather(*tasks)
+        logger.info(f"[SCAN COMPLETE] Found a total of {len(found_users)} unique potential users to process.")
+        logger.info(f"Processing users with a limit of {max_follows_per_run} scheduled follows for this run.")
+
+        # Process found users until we hit the max_follows_per_run limit
+        scheduled_count = 0
+        for username in found_users:
+            if scheduled_count >= max_follows_per_run:
+                logger.info(f"Reached scheduling limit of {max_follows_per_run} users. Stopping scan processing.")
+                break
+            
+            # Process users sequentially to respect the limit
+            # Note: sequential processing is safer for strict limits but slower. 
+            # Given we want to stop exactly at the limit and save API calls, this is preferred over gather().
+            is_scheduled = await process_user(username, api, validator, dry_run)
+            if is_scheduled:
+                scheduled_count += 1
