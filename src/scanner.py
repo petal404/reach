@@ -75,7 +75,8 @@ async def scan_for_users(dry_run=False):
         for keyword in keywords:
             query = f'{keyword} in:name,description,readme created:>={two_weeks_ago} followers:<={max_followers} sort:created-desc'
             logger.info(f"Built search query: {query}")
-            search_tasks.append(api.search_repositories(query, limit=100))
+            for page in range(1, 6):
+                search_tasks.append(api.search_repositories(query, limit=100, page=page))
         
         search_results = await asyncio.gather(*search_tasks)
         for result in search_results:
