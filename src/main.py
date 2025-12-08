@@ -29,7 +29,12 @@ async def random_long_sleep(start_time, settings):
         logger.info(f"Bot has been running for {uptime_minutes:.2f} minutes. Skipping long sleep as it's within the initial {min_sleep_minutes} minutes.")
         return
 
-    sleep_duration_seconds = random.randint(60 * 60, max_sleep_hours * 60 * 60)
+    max_sleep_seconds = int(max_sleep_hours * 60 * 60)
+    min_sleep_seconds = 60 * 60
+    if max_sleep_seconds < min_sleep_seconds:
+        min_sleep_seconds = max_sleep_seconds
+
+    sleep_duration_seconds = random.randint(min_sleep_seconds, max_sleep_seconds)
 
     logger.info(f"Bot has been running for {uptime_minutes:.2f} minutes. Entering random long sleep for {sleep_duration_seconds / 3600:.2f} hours.")
     await asyncio.sleep(sleep_duration_seconds)
