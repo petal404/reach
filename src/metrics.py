@@ -29,6 +29,7 @@ class BotMetrics:
         """Logs a comprehensive summary of the bot's run."""
         hit_rate = (self.users_scheduled / self.users_processed * 100) if self.users_processed > 0 else 0
         total_runtime = time.time() - self.start_time
+        start_datetime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.start_time))
 
         # Format total_sleep_time
         sleep_td = timedelta(seconds=self.total_sleep_time)
@@ -39,6 +40,7 @@ class BotMetrics:
 
         summary = (
             "\n---SUMMARY---"
+            f"\nRun started at: {start_datetime}\n" +
             f"Total users processed: {self.users_processed}\n" +
             f"Total Disqualified: {self.users_disqualified}\n" +
             f"Total Scheduled for follow: {self.users_scheduled}\n" +
@@ -50,7 +52,7 @@ class BotMetrics:
             f"Total sleeping time: {formatted_sleep_time}\n" +
             f"Total runtime: {timedelta(seconds=total_runtime)}\n"
         )
-        logger.info(summary)
+        logger.info(summary, extra={'is_summary': True})
 
 # Global metrics instance
 metrics_tracker = BotMetrics()
