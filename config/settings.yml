@@ -17,4 +17,4 @@ limits:
 
 unfollow:
   # Unfollow users who haven't been active in this many days
-  inactive_days: 270 # 9 months
+  inactive_days: 21 # 9 months
