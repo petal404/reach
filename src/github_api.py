@@ -164,6 +164,10 @@ class GithubAPI:
     async def get_public_events(self, per_page=100):
         return await self._request("GET", "/events", params={"per_page": per_page})
 
+    async def get_repo_events(self, owner, repo_name, limit=100):
+        """Fetches recent events for a specific repository."""
+        return await self._request("GET", f"/repos/{owner}/{repo_name}/events", params={"per_page": limit})
+
     async def get_authenticated_user(self):
         """Gets the username of the authenticated user."""
         data = await self._request("GET", "/user")

@@ -12,6 +12,17 @@ repository_keywords:
   - "cv"
   - "my-site"
 
+# High-signal learning repositories to watch for new stars
+target_repos:
+  - "freeCodeCamp/freeCodeCamp"
+  - "kamranahmedse/developer-roadmap"
+  - "jwasham/coding-interview-university"
+  - "getify/You-Dont-Know-JS"
+  - "ohmyzsh/ohmyzsh"
+  - "public-apis/public-apis"
+  - "donnemartin/system-design-primer"
+  - "EbookFoundation/free-programming-books"
+
 # New sections for enhanced scoring
 
 # Weights for different signal categories

@@ -2,7 +2,7 @@ import logging
 import asyncio
 from datetime import datetime, timedelta, timezone
 from .github_api import GithubAPI
-from .database import add_or_update_user, is_user_disqualified
+from .database import add_or_update_user, is_user_disqualified, get_repo_last_scanned_at, update_repo_last_scanned_at
 from .scoring import UserValidator
 from .config_loader import load_config
 from .metrics import metrics_tracker
@@ -93,6 +93,53 @@ async def scan_for_users(dry_run=False):
                     actor = event.get('actor')
                     if actor:
                         found_users.add(actor['login'])
+
+        # Task 3: High-Signal Repo Watcher
+        logger.info("Task 3: Checking for new stars on high-signal learning repositories...")
+        target_repos = criteria.get('target_repos', [])
+        for repo_full_name in target_repos:
+            try:
+                owner, repo_name = repo_full_name.split('/')
+                last_scanned = get_repo_last_scanned_at(repo_full_name)
+                
+                # Default to 24 hours ago if never scanned, to avoid mass-processing old stars
+                if not last_scanned:
+                    last_scanned = datetime.now(timezone.utc) - timedelta(hours=24)
+                    logger.info(f"First time scanning {repo_full_name}. Defaulting to events since {last_scanned}.")
+                else:
+                    logger.info(f"Scanning {repo_full_name} for stars since {last_scanned}.")
+
+                events = await api.get_repo_events(owner, repo_name, limit=100)
+                if not events:
+                    continue
+
+                newest_event_time = last_scanned
+                new_stars_found = 0
+
+                for event in events:
+                    if event['type'] == 'WatchEvent':
+                        event_time = datetime.fromisoformat(event['created_at'].replace('Z', '+00:00'))
+                        
+                        # Keep track of the newest event time to update the DB
+                        if event_time > newest_event_time:
+                            newest_event_time = event_time
+
+                        if event_time > last_scanned:
+                            actor = event.get('actor')
+                            if actor:
+                                found_users.add(actor['login'])
+                                new_stars_found += 1
+                
+                if new_stars_found > 0:
+                    logger.info(f"Found {new_stars_found} new stars on {repo_full_name}.")
+                
+                # Update state to the timestamp of the newest event we saw (or kept same if no new events)
+                # We add a tiny buffer (1 second) to avoid duplicate processing of the exact same timestamp
+                if newest_event_time > last_scanned:
+                    update_repo_last_scanned_at(repo_full_name, newest_event_time)
+
+            except Exception as e:
+                logger.error(f"Error scanning repo {repo_full_name}: {e}")
 
         if not found_users:
             logger.info("Scan complete: No potential users found in this run.")

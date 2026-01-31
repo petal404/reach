@@ -90,6 +90,17 @@ class DisqualifiedUser(Base):
         return f"<DisqualifiedUser(username='{self.username}', disqualified_at='{self.disqualified_at}')>"
 
 
+class RepoState(Base):
+    __tablename__ = 'repo_state'
+
+    id = Column(Integer, primary_key=True)
+    repo_name = Column(String, unique=True, nullable=False)
+    last_scanned_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def __repr__(self):
+        return f"<RepoState(repo_name='{self.repo_name}', last_scanned_at='{self.last_scanned_at}')>"
+
+
 class BotStatus(Base):
     __tablename__ = 'bot_status'
 
@@ -312,6 +323,34 @@ def update_bot_status(phase: str):
     except Exception as e:
         session.rollback()
         logger.error(f"Error updating bot status to {phase}: {e}")
+    finally:
+        session.close()
+
+def get_repo_last_scanned_at(repo_name):
+    """Retrieves the last scanned timestamp for a specific repository."""
+    session = Session()
+    try:
+        repo_state = session.query(RepoState).filter_by(repo_name=repo_name).first()
+        if repo_state:
+            return repo_state.last_scanned_at.replace(tzinfo=timezone.utc)
+        return None
+    finally:
+        session.close()
+
+def update_repo_last_scanned_at(repo_name, timestamp):
+    """Updates the last scanned timestamp for a specific repository."""
+    session = Session()
+    try:
+        repo_state = session.query(RepoState).filter_by(repo_name=repo_name).first()
+        if repo_state:
+            repo_state.last_scanned_at = timestamp
+        else:
+            new_repo_state = RepoState(repo_name=repo_name, last_scanned_at=timestamp)
+            session.add(new_repo_state)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error updating repo state for {repo_name}: {e}")
     finally:
         session.close()
 
