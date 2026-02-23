@@ -11,7 +11,7 @@ repository_keywords:
   - "resume"
   - "cv"
   - "my-site"
-  - "valentine"
+  - "vibe"
 
 # High-signal learning repositories to watch for new stars
 target_repos:
@@ -19,7 +19,6 @@ target_repos:
   - "kamranahmedse/developer-roadmap"
   - "jwasham/coding-interview-university"
   - "getify/You-Dont-Know-JS"
-  - "ohmyzsh/ohmyzsh"
   - "public-apis/public-apis"
   - "donnemartin/system-design-primer"
   - "EbookFoundation/free-programming-books"
