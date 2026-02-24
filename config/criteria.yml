@@ -11,7 +11,6 @@ repository_keywords:
   - "resume"
   - "cv"
   - "my-site"
-  - "vibe"
 
 # High-signal learning repositories to watch for new stars
 target_repos:
@@ -19,9 +18,11 @@ target_repos:
   - "kamranahmedse/developer-roadmap"
   - "jwasham/coding-interview-university"
   - "getify/You-Dont-Know-JS"
-  - "public-apis/public-apis"
   - "donnemartin/system-design-primer"
   - "EbookFoundation/free-programming-books"
+  - "sharu725/online-cv"
+  - "srbhr/Resume-Matcher"
+  - "amruthpillai/reactive-resume"
 
 # New sections for enhanced scoring
 
