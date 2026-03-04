@@ -79,65 +79,49 @@ async def follow_users(dry_run=False):
             await asyncio.sleep(sleep_duration)
 
 async def unfollow_users(dry_run=False):
-    """Unfollows users who are not following back or have become disqualified, prioritizing the oldest non-followers."""
-    settings, criteria = load_config()
-    validator = UserValidator(criteria)
+    """Unfollows random users who are not in the database and do not follow back."""
+    settings, _ = load_config()
     async with GithubAPI() as api:
         limit = settings['limits'].get('max_unfollow', 200)
         
-        logger.info("Fetching bot's current followers to identify non-followers efficiently.")
+        # Get my own username
+        my_username = await api.get_authenticated_user()
+        if not my_username:
+            logger.error("Could not determine bot's own username. Aborting unfollow sequence.")
+            return
+
+        logger.info(f"Fetching users followed by {my_username} from GitHub...")
+        all_following = await api.get_following(my_username)
+        all_following_set = set(all_following)
+        logger.info(f"Bot currently follows {len(all_following_set)} users.")
+
+        logger.info("Fetching bot's current followers to identify who to exclude (those following back).")
         my_followers = await api.get_my_followers()
         my_followers_set = set(my_followers)
         logger.info(f"Bot has {len(my_followers_set)} followers.")
 
-        # Get all followed users from DB
-        followed_users = get_followed_users()
-        # Sort by followed_at ASC (oldest first)
-        # Handle cases where followed_at might be None (though it shouldn't be for 'followed' status)
-        followed_users.sort(key=lambda x: x['followed_at'] if x['followed_at'] else datetime.min.replace(tzinfo=timezone.utc))
+        logger.info("Fetching all usernames in database to exclude them from the unfollow list.")
+        from .database import get_all_usernames_in_db
+        usernames_in_db = get_all_usernames_in_db()
+        logger.info(f"There are {len(usernames_in_db)} usernames in the database.")
 
-        users_to_unfollow = []
-
-        # 1. Identify users who are not following back
-        for user_dict in followed_users:
-            username = user_dict['username']
-            if username not in my_followers_set:
-                users_to_unfollow.append(username)
-                if len(users_to_unfollow) >= limit:
-                    break
+        # Candidates for unfollowing are:
+        # Those I follow who:
+        # 1. Don't follow me back.
+        # 2. Are not in the database.
+        candidates = [user for user in all_following_set if user not in my_followers_set and user not in usernames_in_db]
         
-        logger.info(f"Identified {len(users_to_unfollow)} users who haven't followed back.")
+        logger.info(f"Identified {len(candidates)} potential candidates for unfollowing (not in DB and not following back).")
 
-        # 2. If we still have room, check for disqualified users among those who DO follow back (optional, but keeping for completeness)
-        if len(users_to_unfollow) < limit:
-            remaining_limit = limit - len(users_to_unfollow)
-            logger.info(f"Checking for disqualified users among those who follow back (up to {remaining_limit} more).")
-            # We check the oldest ones who follow back
-            checked_count = 0
-            for user_dict in followed_users:
-                username = user_dict['username']
-                if username in my_followers_set:
-                    # To conserve resources, we only check a few or skip this if not strictly required
-                    # But the previous implementation had it. Let's limit it to avoid too many API calls.
-                    if checked_count >= remaining_limit * 2: # Check twice as many as we need to find
-                        break
-                    
-                    user_data = await api.get_user_details(username)
-                    checked_count += 1
-                    if user_data:
-                        is_disqualified, reason = validator.is_disqualified(user_data)
-                        if is_disqualified:
-                            logger.info(f"Followed user {username} is now disqualified (Reason: {reason}). Scheduling for unfollow.")
-                            if username not in users_to_unfollow:
-                                users_to_unfollow.append(username)
-                                if len(users_to_unfollow) >= limit:
-                                    break
-
-        if not users_to_unfollow:
-            logger.info("No users to unfollow at this time.")
+        if not candidates:
+            logger.info("No candidates for unfollowing found (either all follow back or all are in the database).")
             return
 
-        logger.info(f"Starting unfollow sequence for {len(users_to_unfollow)} users.")
+        # Pick random candidates up to the limit
+        num_to_unfollow = min(len(candidates), limit)
+        users_to_unfollow = random.sample(candidates, num_to_unfollow)
+
+        logger.info(f"Starting unfollow sequence for {len(users_to_unfollow)} random users.")
 
         unfollowed_count = 0
         for username in users_to_unfollow:

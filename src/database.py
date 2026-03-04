@@ -213,6 +213,15 @@ def get_user_data_from_db(username):
     finally:
         session.close()
 
+def get_all_usernames_in_db():
+    """Retrieves a set of all usernames currently in the database."""
+    session = Session()
+    try:
+        usernames = session.query(User.username).all()
+        return {u[0] for u in usernames}
+    finally:
+        session.close()
+
 def get_followed_users():
     """Retrieves all users with 'followed' status, ordered by follow date."""
     session = Session()
