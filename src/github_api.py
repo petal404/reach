@@ -189,6 +189,38 @@ class GithubAPI:
                 break # No data or an error occurred
         return following_list
 
+    async def get_followers(self, username):
+        """Gets the full list of users who follow a user, handling pagination."""
+        followers_list = []
+        page = 1
+        while True:
+            params = {"per_page": 100, "page": page}
+            data = await self._request("GET", f"/users/{username}/followers", params=params)
+            if data:
+                followers_list.extend([user['login'] for user in data])
+                if len(data) < 100:
+                    break # Last page
+                page += 1
+            else:
+                break # No data or an error occurred
+        return followers_list
+
+    async def get_my_followers(self):
+        """Gets the full list of users who follow the authenticated user."""
+        followers_list = []
+        page = 1
+        while True:
+            params = {"per_page": 100, "page": page}
+            data = await self._request("GET", "/user/followers", params=params)
+            if data:
+                followers_list.extend([user['login'] for user in data])
+                if len(data) < 100:
+                    break # Last page
+                page += 1
+            else:
+                break # No data or an error occurred
+        return followers_list
+
     async def get_comprehensive_user_data(self, username, since_date_events=None):
         user_details, repos_data, starred_repos_data, orgs_data, events_data, profile_readme_content = await asyncio.gather(
             self.get_user_details(username),

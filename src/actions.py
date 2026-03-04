@@ -3,7 +3,7 @@ import asyncio
 import random
 from datetime import datetime, timedelta, timezone
 from .github_api import GithubAPI
-from .database import update_user_status, get_users_to_check, count_followed_users, get_users_by_status_and_score
+from .database import update_user_status, get_users_to_check, count_followed_users, get_users_by_status_and_score, get_followed_users
 from .config_loader import load_config
 from .metrics import metrics_tracker
 from .scoring import UserValidator
@@ -79,64 +79,84 @@ async def follow_users(dry_run=False):
             await asyncio.sleep(sleep_duration)
 
 async def unfollow_users(dry_run=False):
-    """Unfollows users who are not following back or have become disqualified."""
+    """Unfollows users who are not following back or have become disqualified, prioritizing the oldest non-followers."""
     settings, criteria = load_config()
     validator = UserValidator(criteria)
     async with GithubAPI() as api:
-        limit = settings['limits'].get('max_unfollow', 50)
-        inactive_days_threshold = settings['unfollow'].get('inactive_days', 270)
+        limit = settings['limits'].get('max_unfollow', 200)
         
-        total_followed_users = count_followed_users()
-        daily_check_limit = total_followed_users // 14
+        logger.info("Fetching bot's current followers to identify non-followers efficiently.")
+        my_followers = await api.get_my_followers()
+        my_followers_set = set(my_followers)
+        logger.info(f"Bot has {len(my_followers_set)} followers.")
 
-        # 1. Get users who need to be checked
-        users_to_check = get_users_to_check(14, daily_check_limit)
-        users_to_unfollow = set()
+        # Get all followed users from DB
+        followed_users = get_followed_users()
+        # Sort by followed_at ASC (oldest first)
+        # Handle cases where followed_at might be None (though it shouldn't be for 'followed' status)
+        followed_users.sort(key=lambda x: x['followed_at'] if x['followed_at'] else datetime.min.replace(tzinfo=timezone.utc))
 
-        for user_dict in users_to_check:
+        users_to_unfollow = []
+
+        # 1. Identify users who are not following back
+        for user_dict in followed_users:
             username = user_dict['username']
-            followed_at = datetime.fromisoformat(user_dict.get('followed_at'))
+            if username not in my_followers_set:
+                users_to_unfollow.append(username)
+                if len(users_to_unfollow) >= limit:
+                    break
+        
+        logger.info(f"Identified {len(users_to_unfollow)} users who haven't followed back.")
 
-            # Update last_checked_at timestamp
-            update_user_status(username, 'followed', last_checked_at=datetime.now(timezone.utc))
-
-            is_follower = await api.check_is_follower(username)
-            if not is_follower:
-                if followed_at and (datetime.now(timezone.utc) - followed_at.replace(tzinfo=timezone.utc)).days > inactive_days_threshold:
-                    logger.info(f"User {username} has not followed back for >{inactive_days_threshold} days. Scheduling for unfollow.")
-                    users_to_unfollow.add(username)
-
-        # 2. Get followed users who are now disqualified
-        for user_dict in users_to_check:
-            username = user_dict['username']
-            user_data = await api.get_user_details(username)
-            if user_data:
-                is_disqualified, reason = validator.is_disqualified(user_data)
-                if is_disqualified:
-                    logger.info(f"Followed user {username} is now disqualified. Reason: {reason}. Scheduling for unfollow.")
-                    users_to_unfollow.add(username)
+        # 2. If we still have room, check for disqualified users among those who DO follow back (optional, but keeping for completeness)
+        if len(users_to_unfollow) < limit:
+            remaining_limit = limit - len(users_to_unfollow)
+            logger.info(f"Checking for disqualified users among those who follow back (up to {remaining_limit} more).")
+            # We check the oldest ones who follow back
+            checked_count = 0
+            for user_dict in followed_users:
+                username = user_dict['username']
+                if username in my_followers_set:
+                    # To conserve resources, we only check a few or skip this if not strictly required
+                    # But the previous implementation had it. Let's limit it to avoid too many API calls.
+                    if checked_count >= remaining_limit * 2: # Check twice as many as we need to find
+                        break
+                    
+                    user_data = await api.get_user_details(username)
+                    checked_count += 1
+                    if user_data:
+                        is_disqualified, reason = validator.is_disqualified(user_data)
+                        if is_disqualified:
+                            logger.info(f"Followed user {username} is now disqualified (Reason: {reason}). Scheduling for unfollow.")
+                            if username not in users_to_unfollow:
+                                users_to_unfollow.append(username)
+                                if len(users_to_unfollow) >= limit:
+                                    break
 
         if not users_to_unfollow:
             logger.info("No users to unfollow at this time.")
             return
 
-        logger.info(f"Found {len(users_to_unfollow)} users to unfollow. Processing up to {limit} users.")
+        logger.info(f"Starting unfollow sequence for {len(users_to_unfollow)} users.")
 
-        for username in list(users_to_unfollow)[:limit]:
+        unfollowed_count = 0
+        for username in users_to_unfollow:
             if dry_run:
                 logger.info(f"[DRY-RUN] Would unfollow user: {username}", extra={'props': {"username": username, "dry_run": True}})
-                # In a real dry run, we might change status to 'skipped' but here we do nothing to avoid altering the DB state for the next step
+                unfollowed_count += 1
                 continue
 
             success = await api.unfollow_user(username)
             if success:
                 logger.info(f"Successfully unfollowed user: {username}", extra={'props': {"username": username}})
-                update_user_status(username, 'unfollowed') # This will now delete the user
+                update_user_status(username, 'unfollowed')
                 metrics_tracker.users_unfollowed += 1
+                unfollowed_count += 1
             else:
                 logger.error(f"Failed to unfollow user: {username}", extra={'props': {"username": username}})
 
-            # Use shorter, 1/3rd interval for unfollowing
-            sleep_duration = random.randint(3, 30)
-            logger.debug(f"Sleeping for {sleep_duration} seconds...", extra={'props': {"sleep_duration": sleep_duration}})
+            # Use shorter interval for unfollowing to speed up 200 unfollows, but still be safe
+            sleep_duration = random.randint(2, 8) 
             await asyncio.sleep(sleep_duration)
+
+        logger.info(f"Unfollow sequence complete. Total unfollowed: {unfollowed_count}")

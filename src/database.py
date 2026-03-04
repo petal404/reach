@@ -214,13 +214,13 @@ def get_user_data_from_db(username):
         session.close()
 
 def get_followed_users():
-    """Retrieves all users with 'followed' status."""
+    """Retrieves all users with 'followed' status, ordered by follow date."""
     session = Session()
     try:
-        users = session.query(User).filter_by(status='followed').all()
+        users = session.query(User).filter_by(status='followed').order_by(User.followed_at.asc()).all()
         return [{
             'username': user.username,
-            'followed_at': user.followed_at # Only need this for unfollow logic
+            'followed_at': user.followed_at 
         } for user in users]
     finally:
         session.close()
