@@ -23,6 +23,10 @@ target_repos:
   - "sharu725/online-cv"
   - "srbhr/Resume-Matcher"
   - "amruthpillai/reactive-resume"
+  - "firstcontributions/first-contributions"
+  - "MunGell/awesome-for-beginners"
+  - "sindresorhus/awesome"
+  - "appwrite/appwrite"
 
 # New sections for enhanced scoring
 
