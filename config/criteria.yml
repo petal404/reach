@@ -17,9 +17,6 @@ target_repos:
   - "freeCodeCamp/freeCodeCamp"
   - "kamranahmedse/developer-roadmap"
   - "jwasham/coding-interview-university"
-  - "getify/You-Dont-Know-JS"
-  - "donnemartin/system-design-primer"
-  - "EbookFoundation/free-programming-books"
   - "sharu725/online-cv"
   - "srbhr/Resume-Matcher"
   - "amruthpillai/reactive-resume"
@@ -27,7 +24,13 @@ target_repos:
   - "MunGell/awesome-for-beginners"
   - "sindresorhus/awesome"
   - "appwrite/appwrite"
-
+  - "posquit0/Awesome-CV"
+  - "AmruthPillai/Reactive-Resume"
+  - "anuraghazra/github-readme-stats"
+  - "getify/You-Dont-Know-JS"
+  - "EbookFoundation/free-programming-books"
+  - "donnemartin/system-design-primer"
+  
 # New sections for enhanced scoring
 
 # Weights for different signal categories
