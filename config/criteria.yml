@@ -31,6 +31,7 @@ target_repos:
   - "EbookFoundation/free-programming-books"
   - "donnemartin/system-design-primer"
   - "cloudcommunity/Free-Certifications"
+  - "tiimgreen/github-cheat-sheet"
   
 # New sections for enhanced scoring
 
