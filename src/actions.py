@@ -81,9 +81,13 @@ async def follow_users(dry_run=False):
 async def unfollow_users(dry_run=False):
     """Unfollows random users who are not in the database and do not follow back."""
     settings, _ = load_config()
-    async with GithubAPI() as api:
-        limit = settings['limits'].get('max_unfollow', 200)
+    limit = settings['limits'].get('max_unfollow', 200)
+
+    if limit <= 0:
+        logger.info("Unfollow limit is set to 0. Skipping unfollow sequence entirely.")
+        return
         
+    async with GithubAPI() as api:
         # Get my own username
         my_username = await api.get_authenticated_user()
         if not my_username:
