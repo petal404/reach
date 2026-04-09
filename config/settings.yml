@@ -9,7 +9,7 @@ limits:
   # Max number of users to scan/follow/unfollow per run. Set to 0 for no limit.
   max_scan: 2500
   max_follow: 289 # Usual 100
-  max_unfollow: 500
+  max_unfollow: 0
   # Stop API calls if remaining rate limit is below this threshold
   rate_limit_buffer: 100
   cache_ttl_hours: 24 # TTL for cached user data in DB
