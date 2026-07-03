@@ -27,7 +27,8 @@ async def process_user(username, api, validator, dry_run=False):
 
     is_disqualified, reason = validator.is_disqualified(user_data)
     if is_disqualified:
-        logger.info(f"User '{username}' was disqualified.", extra={'props': {"username": username, "reason": reason}})
+        safe_reason = reason if reason else "Unspecified reason"
+        logger.info(f"User '{username}' was disqualified. Reason: {safe_reason}", extra={'props': {"username": username, "reason": safe_reason}})
         metrics_tracker.users_disqualified += 1
         if not dry_run:
             add_or_update_user(user_data, status='disqualified')
