@@ -28,7 +28,7 @@ async def follow_users(dry_run=False):
     
     async with GithubAPI() as api:
         while user_index < len(users_to_follow) and followed_today_count < max_follow_per_run:
-            batch_size = random.randint(13, 33)
+            batch_size = random.randint(52, 132)
             
             # Determine the actual size of the current batch
             end_index = min(user_index + batch_size, len(users_to_follow))
