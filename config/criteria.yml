@@ -16,7 +16,7 @@ repository_keywords:
 # High-signal learning repositories to watch for new stars
 target_repos:
 - "freeCodeCamp/freeCodeCamp"
-- "kamranahmedse/developer-roadmap"
+- "nilbuild/developer-roadmap"
 - "jwasham/coding-interview-university"
 - "sharu725/online-cv"
 - "srbhr/Resume-Matcher"
