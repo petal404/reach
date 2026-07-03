@@ -64,7 +64,7 @@ async def scan_for_users(dry_run=False):
         # Task 1: Keyword-based search
         logger.info("Searching for users based on keywords...")
         keywords = criteria.get('repository_keywords', ['portfolio'])
-        search_tasks = []
+        search_results = []
         two_weeks_ago = (datetime.now(timezone.utc) - timedelta(days=14)).strftime('%Y-%m-%d')
         max_followers = criteria.get('negative_signals', {}).get('max_followers', 100)
 
@@ -72,9 +72,10 @@ async def scan_for_users(dry_run=False):
             query = f'{keyword} in:name,description,readme created:>={two_weeks_ago} followers:<={max_followers} sort:created-desc'
             logger.info(f"Built search query: {query}")
             for page in range(1, 6):
-                search_tasks.append(api.search_repositories(query, limit=100, page=page))
-        
-        search_results = await asyncio.gather(*search_tasks)
+                result = await api.search_repositories(query, limit=100, page=page)
+                search_results.append(result)
+                # GitHub Search API limit is 30 req/min. Sleep ~2.1s to avoid 403 secondary limits.
+                await asyncio.sleep(2.1)
         for result in search_results:
             if result:
                 for repo in result:
