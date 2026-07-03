@@ -156,16 +156,18 @@ async def scan_for_users(dry_run=False):
         logger.info(f"[SCAN COMPLETE] Found a total of {len(found_users)} unique potential users to process.")
         logger.info(f"Processing users with a limit of {max_follows_per_run} scheduled follows for this run.")
 
-        # Process found users until we hit the max_follows_per_run limit
+        # Process found users concurrently in chunks until we hit the max_follows_per_run limit
         scheduled_count = 0
-        for username in found_users:
+        found_users_list = list(found_users)
+        chunk_size = 20
+        
+        for i in range(0, len(found_users_list), chunk_size):
             if scheduled_count >= max_follows_per_run:
                 logger.info(f"Reached scheduling limit of {max_follows_per_run} users. Stopping scan processing.")
                 break
             
-            # Process users sequentially to respect the limit
-            # Note: sequential processing is safer for strict limits but slower. 
-            # Given we want to stop exactly at the limit and save API calls, this is preferred over gather().
-            is_scheduled = await process_user(username, api, validator, dry_run)
-            if is_scheduled:
-                scheduled_count += 1
+            chunk = found_users_list[i:i + chunk_size]
+            tasks = [process_user(username, api, validator, dry_run) for username in chunk]
+            results = await asyncio.gather(*tasks)
+            
+            scheduled_count += sum(1 for is_scheduled in results if is_scheduled)

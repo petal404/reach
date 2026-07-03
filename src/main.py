@@ -89,7 +89,7 @@ async def main():
 
         logger.info("Bot run finished.")
         metrics_tracker.log_summary()
-        await random_long_sleep(start_time, settings)
+        # await random_long_sleep(start_time, settings)  # Disabled to optimize workflow runtime
     finally:
         if os.path.exists(LOCK_FILE):
             os.remove(LOCK_FILE)

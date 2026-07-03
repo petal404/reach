@@ -68,11 +68,11 @@ async def follow_users(dry_run=False):
 
             # Exponential backoff after 98 follows
             if followed_today_count > 98:
-                sleep_min = settings['delays'].get('action_min', 10) * (followed_today_count / 10)
-                sleep_max = settings['delays'].get('action_max', 90) * (followed_today_count / 10)
+                sleep_min = settings['delays'].get('action_min', 2) * (followed_today_count / 50)
+                sleep_max = settings['delays'].get('action_max', 5) * (followed_today_count / 50)
             else:
-                sleep_min = 10  # 10 seconds
-                sleep_max = 90 # 1.5 minutes
+                sleep_min = 2  # 2 seconds
+                sleep_max = 5 # 5 seconds
             
             sleep_duration = random.randint(int(sleep_min), int(sleep_max))
             logger.info(f"Batch complete. Pausing for {sleep_duration} seconds.")
@@ -144,7 +144,7 @@ async def unfollow_users(dry_run=False):
                 logger.error(f"Failed to unfollow user: {username}", extra={'props': {"username": username}})
 
             # Use shorter interval for unfollowing to speed up 200 unfollows, but still be safe
-            sleep_duration = random.randint(2, 8) 
+            sleep_duration = random.uniform(0.5, 1.5) 
             await asyncio.sleep(sleep_duration)
 
         logger.info(f"Unfollow sequence complete. Total unfollowed: {unfollowed_count}")
