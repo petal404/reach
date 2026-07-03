@@ -33,7 +33,7 @@ class GithubAPI:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.client.aclose()
 
-    async def _request(self, method, url, **kwargs):
+    async def _request(self, method, url, return_response=False, **kwargs):
         """A helper method to handle all API requests."""
         metrics_tracker.increment_api_requests()
         logger.debug(f"Request: {method} {url}", extra={'props': {"method": method, "url": url, "params": kwargs.get('params')}})
@@ -52,13 +52,15 @@ class GithubAPI:
                     await asyncio.sleep(sleep_duration)
             
             response.raise_for_status() # Raise an exception for bad status codes
+            if return_response:
+                return response
             return response.json()
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error occurred: {e.response.status_code} for URL {e.request.url}")
-            return None
+            return None if not return_response else None
         except Exception as e:
             logger.error(f"An error occurred: {e}")
-            return None
+            return None if not return_response else None
 
     async def search_repositories(self, query, limit, page=1):
         params = {"q": query, "per_page": limit, "page": page}
@@ -173,53 +175,82 @@ class GithubAPI:
         data = await self._request("GET", "/user")
         return data['login'] if data and 'login' in data else None
 
+    async def _get_paginated_list(self, endpoint):
+        """Gets a full list from a paginated endpoint concurrently."""
+        result_list = []
+        
+        # 1. Fetch first page with response object to check headers
+        params = {"per_page": 100, "page": 1}
+        response = await self._request("GET", endpoint, return_response=True, params=params)
+        
+        if not response:
+            return result_list
+            
+        data = response.json()
+        if not data:
+            return result_list
+            
+        result_list.extend([item['login'] for item in data])
+        
+        if len(data) < 100:
+            return result_list # No more pages
+
+        last_page = None
+        if 'link' in response.headers:
+            match = re.search(r'page=(\d+)[^>]*>; rel="last"', response.headers['link'])
+            if match:
+                last_page = int(match.group(1))
+
+        chunk_size = 50
+
+        if last_page:
+            for start_page in range(2, last_page + 1, chunk_size):
+                end_page = min(start_page + chunk_size, last_page + 1)
+                tasks = []
+                for page in range(start_page, end_page):
+                    page_params = {"per_page": 100, "page": page}
+                    tasks.append(self._request("GET", endpoint, params=page_params))
+                    
+                results = await asyncio.gather(*tasks)
+                for page_data in results:
+                    if page_data:
+                        result_list.extend([item['login'] for item in page_data])
+        else:
+            page = 2
+            while True:
+                tasks = []
+                for p in range(page, page + chunk_size):
+                    page_params = {"per_page": 100, "page": p}
+                    tasks.append(self._request("GET", endpoint, params=page_params))
+                    
+                results = await asyncio.gather(*tasks)
+                
+                finished = False
+                for page_data in results:
+                    if page_data:
+                        result_list.extend([item['login'] for item in page_data])
+                        if len(page_data) < 100:
+                            finished = True
+                    else:
+                        finished = True
+                        
+                if finished:
+                    break
+                page += chunk_size
+
+        return result_list
+
     async def get_following(self, username):
-        """Gets the full list of users a user is following, handling pagination."""
-        following_list = []
-        page = 1
-        while True:
-            params = {"per_page": 100, "page": page}
-            data = await self._request("GET", f"/users/{username}/following", params=params)
-            if data:
-                following_list.extend([user['login'] for user in data])
-                if len(data) < 100:
-                    break # Last page
-                page += 1
-            else:
-                break # No data or an error occurred
-        return following_list
+        """Gets the full list of users a user is following concurrently."""
+        return await self._get_paginated_list(f"/users/{username}/following")
 
     async def get_followers(self, username):
-        """Gets the full list of users who follow a user, handling pagination."""
-        followers_list = []
-        page = 1
-        while True:
-            params = {"per_page": 100, "page": page}
-            data = await self._request("GET", f"/users/{username}/followers", params=params)
-            if data:
-                followers_list.extend([user['login'] for user in data])
-                if len(data) < 100:
-                    break # Last page
-                page += 1
-            else:
-                break # No data or an error occurred
-        return followers_list
+        """Gets the full list of users who follow a user concurrently."""
+        return await self._get_paginated_list(f"/users/{username}/followers")
 
     async def get_my_followers(self):
-        """Gets the full list of users who follow the authenticated user."""
-        followers_list = []
-        page = 1
-        while True:
-            params = {"per_page": 100, "page": page}
-            data = await self._request("GET", "/user/followers", params=params)
-            if data:
-                followers_list.extend([user['login'] for user in data])
-                if len(data) < 100:
-                    break # Last page
-                page += 1
-            else:
-                break # No data or an error occurred
-        return followers_list
+        """Gets the full list of users who follow the authenticated user concurrently."""
+        return await self._get_paginated_list("/user/followers")
 
     async def get_comprehensive_user_data(self, username, since_date_events=None):
         user_details, repos_data, starred_repos_data, orgs_data, events_data, profile_readme_content = await asyncio.gather(
