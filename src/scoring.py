@@ -38,7 +38,7 @@ class UserValidator:
         
         # Check for existing portfolio (blog URL)
         blog_url = user_data.get('blog', '')
-        if blog_url and not any(domain in blog_url for domain in ['github.com', 'linkedin.com', 'twitter.com', 'medium.com', 'youtube.com', 'instagram.com', 'facebook.com', 'tiktok.com']):
+        if blog_url and not any(domain in blog_url for domain in ['github.com', 'linkedin.com', 'twitter.com', 'medium.com', 'youtube.com', 'instagram.com', 'facebook.com', 'tiktok.com', 'gmail.com', 'orcid.org', 'x.com' ]):
             return True, "Established external portfolio link found"
 
         # Check for explicit exclusion keywords
