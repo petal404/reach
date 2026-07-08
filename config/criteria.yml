@@ -15,6 +15,12 @@ repository_keywords:
 
 # High-signal learning repositories to watch for new stars
 target_repos:
+- "SimplifyJobs/Summer2026-Internships"
+- "engineerapart/TheRemoteFreelancer"
+- "SimplifyJobs/New-Grad-Positions"
+- "poteto/hiring-without-whiteboards"
+- "vanshb03/Summer2027-Internships"
+- "cassidoo/getting-a-gig"
 - "freeCodeCamp/freeCodeCamp"
 - "nilbuild/developer-roadmap"
 - "jwasham/coding-interview-university"
@@ -40,7 +46,7 @@ target_repos:
 - "DataDog/datadog-agent"
 - "danielmiessler/seclists"
 - "jsonresume/resume-schema"
-- "freqtrade/freqtrade"
+- "vanshb03/Summer2027-Internships"
 - "ccxt/ccxt"
 - "dbt-labs/dbt-core"
 - "PrefectHQ/prefect"
