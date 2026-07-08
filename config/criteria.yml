@@ -15,6 +15,7 @@ repository_keywords:
 
 # High-signal learning repositories to watch for new stars
 target_repos:
+- "remoteintech/remote-jobs"
 - "feder-cr/Jobs_Applier_AI_Agent_AIHawk"
 - "speedyapply/2027-SWE-College-Jobs"
 - "SimplifyJobs/Summer2026-Internships"
