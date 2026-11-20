@@ -7,7 +7,7 @@ delays:
 
 limits:
   # Max number of users to scan/follow/unfollow per run. Set to 0 for no limit.
-  max_scan: 2500
+  max_scan: 2
   max_follow: 0 # Usual 100
   max_unfollow: 0 # Usual 100
   # Stop API calls if remaining rate limit is below this threshold
